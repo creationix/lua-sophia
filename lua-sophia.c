@@ -6,7 +6,7 @@ Usage:
 	local sophia = require "sophia"
 	local env = sophia.env() -- create a new environment
 	env:ctl("dir", "db") -- set the directory where the database is/will be stored
-	
+
 	local db = ctl:open() -- open the database handle
 
 	-- store and retrieve a value
@@ -22,7 +22,19 @@ Usage:
 #include <lauxlib.h>
 
 #include <string.h>
-#include <sophia.h>
+
+#include "./sophia/db/crc.c"
+#include "./sophia/db/e.c"
+#include "./sophia/db/i.c"
+#include "./sophia/db/cat.c"
+#include "./sophia/db/rep.c"
+#include "./sophia/db/util.c"
+#include "./sophia/db/sp.c"
+#include "./sophia/db/file.c"
+#include "./sophia/db/recover.c"
+#include "./sophia/db/merge.c"
+#include "./sophia/db/gc.c"
+#include "./sophia/db/cursor.c"
 
 #define META_ENV "Sophia Environment"
 #define META_DB "Sophia Database"
@@ -42,13 +54,13 @@ static inline int cmp(char *a, size_t asz, char *b, size_t bsz, void *arg)
 	register int rc = memcmp(a, b, sz);
 	return (rc == 0 ?
 		/* first `sz` bytes are the same, compare lengths */
-		((asz == bsz) ? 0 : (asz < bsz ? -1 : 1)) 
+		((asz == bsz) ? 0 : (asz < bsz ? -1 : 1))
 		:
 		/* they differ, normalize to -1 : 1 */
 		(rc > 0 ? 1 : -1));
 }
 
-/** Create a new Sophia environment handle. This can be used to open database handles. 
+/** Create a new Sophia environment handle. This can be used to open database handles.
 @function sophia.env
 @treturn environment A new environment
 */
@@ -108,7 +120,7 @@ static int ls_ctl(lua_State *L)
 	const char *options[] = { "dir", NULL };
 	int opt = luaL_checkoption(L, 2, NULL, options);
 	int rc = 0;
-	
+
 	if (opt == 0) {
 		const char *dir = luaL_checkstring(L, 3);
 		rc = sp_ctl(env, SPDIR, SPO_CREAT|SPO_RDWR, dir);
@@ -180,7 +192,7 @@ static int ls_begin(lua_State *L)
 /** Commit a transaction.
 
 This function is used to apply changes of a multi-statement
-transaction. All modifications made during the transaction are written to 
+transaction. All modifications made during the transaction are written to
 the log file in a single batch. If commit failed, transaction modifications are discarded.
 
 @function database:commit
@@ -203,7 +215,7 @@ static int ls_commit(lua_State *L)
 /** Rollback a transaction.
 
 This function is used to discard a changes of a multi-statement
-transaction. All modifications made during the transaction are not written to 
+transaction. All modifications made during the transaction are not written to
 the log file.
 
 @function database:rollback
@@ -233,7 +245,7 @@ In case of error while retrieving the value, it returns an extra error message.
 @tparam string key The key to lookup in the database
 @treturn[1] string value of `key` if found in database
 @return[2] **nil** if the value is not in the database
-@return[3] **nil, message** in case there was an error retrieving the value 
+@return[3] **nil, message** in case there was an error retrieving the value
 */
 static int ls_get(lua_State *L)
 {
@@ -245,7 +257,7 @@ static int ls_get(lua_State *L)
 	size_t vsize;
 
 	int rc = sp_get(db, key, ksize, &value, &vsize);
-	
+
 	if (rc == -1) {
 		lua_pushnil(L);
 		lua_pushstring(L, sp_error(db));
@@ -256,7 +268,7 @@ static int ls_get(lua_State *L)
 	} else {
 		lua_pushlstring(L, (const char *) value, vsize);
 		free(value);
-		return 1;		
+		return 1;
 	}
 }
 
@@ -267,9 +279,9 @@ the given key is deleted from the database.
 
 @function database:set
 @tparam string key The key under which to store the value
-@tparam string value The value to store in database. 
+@tparam string value The value to store in database.
 @return[1] **true** if the value was stored
-@return[2] **nil, message** in case there was an error retrieving the value 
+@return[2] **nil, message** in case there was an error retrieving the value
 */
 static int ls_set(lua_State *L)
 {
@@ -290,7 +302,7 @@ static int ls_set(lua_State *L)
 	if (rc == -1) {
 		lua_pushnil(L);
 		lua_pushstring(L, sp_error(db));
-		return 2;		
+		return 2;
 	}
 
 	lua_pushboolean(L, 1);
@@ -334,7 +346,7 @@ static int ls_cursor(lua_State *L)
 	const char * key = NULL;
 	void * cur;
 	void ** udcur;
-	
+
 	if (lua_type(L, 2) == LUA_TSTRING) {
 		key = lua_tolstring(L, 2, &ksize);
 	}
@@ -342,7 +354,7 @@ static int ls_cursor(lua_State *L)
 	if (cur == NULL) {
 		lua_pushnil(L);
 		lua_pushstring(L, sp_error(db));
-		return 2;	
+		return 2;
 	}
 
 	lua_pushcfunction(L, ls_fetch);
@@ -408,5 +420,5 @@ int luaopen_sophia(lua_State *L)
 	create_meta(L, META_DB, sophia_db_methods);
 	create_meta(L, META_CUR, sophia_cur_methods);
 	luaL_newlib(L, sophia_module);
-	return 1;	
+	return 1;
 }
