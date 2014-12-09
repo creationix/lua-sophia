@@ -1,9 +1,10 @@
-CFLAGS=-pthread -fPIC -I../luvi/deps/luv/luajit/src -Isophia/db
-
+CFLAGS=-I../luvi/deps/luv/luajit/src -Isophia/db
 ifeq ($(shell uname -s),Darwin)
 LIBS=-bundle -undefined dynamic_lookup
+CFLAGS+= -fno-common
 else
 LIBS=-shared
+CFLAGS+= -pthread -fPIC
 endif
 
 all: sophia.so
