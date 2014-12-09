@@ -1,5 +1,10 @@
-CFLAGS=-pthread -fPIC -I/home/tim/Code/luvi/deps/luv/luajit/src -Isophia/db
+CFLAGS=-pthread -fPIC -I../luvi/deps/luv/luajit/src -Isophia/db
+
+ifeq ($(shell uname -s),Darwin)
+LIBS=-bundle -undefined dynamic_lookup
+else
 LIBS=-shared
+endif
 
 all: sophia.so
 
